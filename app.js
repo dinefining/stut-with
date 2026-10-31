@@ -238,13 +238,17 @@ function pulls(T, F, x, y) {
   return w.map(v => v / sum);
 }
 
+// whether the box x0, y0 to x1, y1 (px) reaches into V, the part of g that will show; no V, all of it shows
+const hits = (V, x0, y0, x1, y1) => !V || x1 > V.x0 && x0 < V.x1 && y1 > V.y0 && y0 < V.y1;
+
 // draw the stutter for one anchor (T.ax, T.ay) into frame F ({x, y, w, h} in px) with settings T. The stutter
-// runs along p (x for Across, y for Down); bands split the other axis, q. Both stutters q too, cut into Bands rows
-function render(g, F, T) {
+// runs along p (x for Across, y for Down); bands split the other axis, q. Both stutters q too, cut into Bands rows.
+// Slices outside V are skipped (unless Sort needs every window to hand them out)
+function render(g, F, T, V) {
   g.imageSmoothingQuality = 'high';
   const d = DIRS[T.dir].id;
   if (d === 'rings') return rings(g, F, T);
-  if (T.angle) return tilted(g, F, T, (T.angle + (d === 'v' ? 90 : 0)) * Math.PI / 180);
+  if (T.angle) return tilted(g, F, T, (T.angle + (d === 'v' ? 90 : 0)) * Math.PI / 180, V);
   const across = d !== 'v', both = d === 'both';
   const Ap = across ? T.ax : T.ay, Aq = across ? T.ay : T.ax;
   const pc = cuts(T.slices, clamp(Ap, 0, 1), T), qc = both ? cuts(T.bands, clamp(Aq, 0, 1), T, 1) : even(T.bands);
@@ -254,11 +258,13 @@ function render(g, F, T) {
   const ep = pc.map(v => P0 + Math.round(v * PW)), eq = qc.map(v => Q0 + Math.round(v * QW));
   // a part of the photo along p and q, as x0, y0, x1, y1 for shade
   const area = (p0, p1, q0, q1) => across ? [p0, q0, p1, q1] : [q0, p0, q1, p1];
+  const shows = (i, j) => T.sort || hits(V, ...area(ep[i], ep[i + 1], eq[j], eq[j + 1]));
   const draws = [];
   for (let j = 0; j < qc.length - 1; j++) {
     // Stagger moves each band's anchor by how far the band is from the anchor; Zigzag reverses every other band
     const Ab = Ap + tilt * ((qc[j] + qc[j + 1]) / 2 - Aq), sgn = T.zigzag && (j - jA) & 1 ? -1 : 1;
     let ws = line(pc.length - 1, i => {
+      if (!shows(i, j)) return null;
       const m = T.light ? lit(shade(...area(pc[i], pc[i + 1], qc[j], qc[j + 1])), T) : 1, rp = hash(i, j, T.seed), rq = hash(j, i, T.seed + 7);
       const mid = (pc[i] + pc[i + 1]) / 2, qm = (qc[j] + qc[j + 1]) / 2, pw = pulls(T, F, ...(across ? [mid, qm] : [qm, mid]));
       // the window each anchor (at Bp, Bq along p and q) would give this slice
@@ -269,8 +275,9 @@ function render(g, F, T) {
       return [sp, pc[i + 1] - pc[i], sq, qc[j + 1] - qc[j]];
     });
     if (T.sort) ws = sorted(ws, w => shade(...area(w[0], w[0] + w[1], w[2], w[2] + w[3])), T);
-    ws.forEach(([sp, spw, sq, sqw], i) => {
-      const fp = T.flip && (i - iA) & 1, fq = both && T.flip && (j - jA) & 1;
+    ws.forEach((w, i) => {
+      if (!w) return;
+      const [sp, spw, sq, sqw] = w, fp = T.flip && (i - iA) & 1, fq = both && T.flip && (j - jA) & 1;
       const s = [sp * SP, sq * SQ, spw * SP, sqw * SQ], r = [ep[i], eq[j], ep[i + 1] - ep[i], eq[j + 1] - eq[j]];
       draws.push(across ? { s, r, fx: fp, fy: fq, i } : { s: [s[1], s[0], s[3], s[2]], r: [r[1], r[0], r[3], r[2]], fx: fq, fy: fp, i });
     });
@@ -281,7 +288,7 @@ function render(g, F, T) {
 
 // Angle: the same stutter on slices turned round the anchor// Angle: the same stutter on slices turned round the anchor by th, p along the slant and q across it. A turned
 // slice can't be a plain window, so each is drawn as the photo shifted along the slant, clipped to the slice
-function tilted(g, F, T, th) {
+function tilted(g, F, T, th, V) {
   const both = DIRS[T.dir].id === 'both', ux = Math.cos(th), uy = Math.sin(th), vx = -uy, vy = ux, k = src.width / F.w;
   const A = [F.x + T.ax * F.w, F.y + T.ay * F.h], corners = [[F.x, F.y], [F.x + F.w, F.y], [F.x, F.y + F.h], [F.x + F.w, F.y + F.h]];
   const ps = corners.map(([x, y]) => (x - A[0]) * ux + (y - A[1]) * uy), qs = corners.map(([x, y]) => (x - A[0]) * vx + (y - A[1]) * vy);
@@ -300,7 +307,9 @@ function tilted(g, F, T, th) {
       const mp = (pc[i] + pc[i + 1]) / 2, mq = (qc[j] + qc[j + 1]) / 2;
       const poly = [pt(pc[i] - gp, qc[j] - gq), pt(pc[i + 1] + gp, qc[j] - gq), pt(pc[i + 1] + gp, qc[j + 1] + gq), pt(pc[i] - gp, qc[j + 1] + gq)];
       const xs = poly.map(q => q[0]), ys = poly.map(q => q[1]), bx = Math.floor(Math.min(...xs)), by = Math.floor(Math.min(...ys));
-      const bw = Math.ceil(Math.max(...xs)) - bx, bh = Math.ceil(Math.max(...ys)) - by, m = T.light ? lit(shade(...area(bx, by, bw, bh)), T) : 1;
+      const bw = Math.ceil(Math.max(...xs)) - bx, bh = Math.ceil(Math.max(...ys)) - by;
+      if (!T.sort && !hits(V, bx, by, bx + bw, by + bh)) return null;
+      const m = T.light ? lit(shade(...area(bx, by, bw, bh)), T) : 1;
       const rp = hash(i, j, T.seed), rq = hash(j, i, T.seed + 7), [cx, cy] = pt(mp, mq), pw = pulls(T, F, (cx - F.x) / F.w, (cy - F.y) / F.h);
       // how far along and across the slant the picture shifts with the anchor at Bp, Bq (fractions of p and q)
       const shift = (Bp, Bq) => {
@@ -321,8 +330,9 @@ function tilted(g, F, T, th) {
       const order = sorted(cells.map((c, i) => [i, 0, 0, 0]), w => key(cells[w[0]]), T).map(w => cells[w[0]]);
       cells = cells.map((c, i) => ({ ...c, ou: order[i].ou, ov: order[i].ov }));
     }
-    cells.forEach(({ mp, mq, poly, bx, by, bw, bh, ou, ov }, i) => {
-      const c = pt(mp, mq);
+    cells.forEach((cell, i) => {
+      if (!cell) return;
+      const { mp, mq, poly, bx, by, bw, bh, ou, ov } = cell, c = pt(mp, mq);
       g.save(); g.beginPath(); poly.forEach((q, n) => n ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); g.clip();
       // Flip mirrors the slice along the slant (and across it, in Both) about its own middle
       if (T.flip && (i - iA) & 1) mirror(g, c, ux, uy);
@@ -400,8 +410,9 @@ function region(pts, n, F) {
   return poly;
 }
 
-// the whole picture into g, with the photo's frame at F: each anchor's stutter on its own part of the photo, the
-// first one underneath everywhere, so no seam shows between them. Feather is done slice by slice, in render
+// the whole picture into g, with the photo's frame at F: each anchor's stutter on its own part of the photo, every
+// one also underneath the parts of anchors after it, so no seam shows between them. Feather is done slice by slice,
+// in render. Each anchor only draws the slices near its own part that are on g, so more anchors cost no more drawing
 function compose(g, F, T) {
   if ((T.light || T.sort) && !lumTable() && blind) say('Light and Sort need a local server (see README)', true);
   geoms = [];
@@ -413,13 +424,18 @@ function compose(g, F, T) {
     ops.sort((a, b) => b.t - a.t).forEach(o => o.ring());
     return;
   }
+  // what of the photo is on g, and a few px of slack round each part for the seams' soft edges
+  const S = { x0: Math.max(F.x, 0), y0: Math.max(F.y, 0), x1: Math.min(F.x + F.w, g.canvas.width), y1: Math.min(F.y + F.h, g.canvas.height) }, pad = 3;
   T.pts.forEach(([ax, ay], n) => {
-    const reg = n ? region(T.pts, n, F) : null, trace = c => { c.beginPath(); reg.forEach((q, k) => k ? c.lineTo(...q) : c.moveTo(...q)); c.closePath(); };
+    // drawn clipped to where it's nearer than every anchor before it, but only where it's nearest of all
+    const reg = n ? region(T.pts.slice(0, n + 1), n, F) : null, own = T.pts.length > 1 ? region(T.pts, n, F) : null;
+    const xs = own ? own.map(q => q[0]) : [], ys = own ? own.map(q => q[1]) : [];
+    const V = own ? { x0: Math.max(S.x0, Math.min(...xs) - pad), y0: Math.max(S.y0, Math.min(...ys) - pad), x1: Math.min(S.x1, Math.max(...xs) + pad), y1: Math.min(S.y1, Math.max(...ys) + pad) } : S;
     g.save();
-    if (reg) { trace(g); g.clip(); }
-    render(g, F, { ...T, ax, ay });
+    if (reg) { g.beginPath(); reg.forEach((q, k) => k ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); g.clip(); }
+    render(g, F, { ...T, ax, ay }, V);
     g.restore();
-    geoms.push({ ...geom, reg: T.pts.length > 1 ? region(T.pts, n, F).map(([x, y]) => [(x - F.x) / F.w, (y - F.y) / F.h]) : null });
+    geoms.push({ ...geom, reg: own ? own.map(([x, y]) => [(x - F.x) / F.w, (y - F.y) / F.h]) : null });
   });
 }
 
