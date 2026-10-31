@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>stutWith</title>
+<meta name="description" content="stutWith: echo for pictures. Cut a photo into slices and repeat one outwards, each copy nudged a little further. A Maybe Machine by Ravi Popat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<!-- share card, for the site at dinefining.github.io/stutwith (a repo named stutwith) -->
+<meta property="og:title" content="stutWith">
+<meta property="og:description" content="Who says echo is just for sound? Stutter a photo: cut it into slices and repeat one outwards, each copy nudged a little further. A Maybe Machine by Ravi Popat.">
+<meta property="og:url" content="https://dinefining.github.io/stutwith/">
+<meta property="og:image" content="https://dinefining.github.io/stutwith/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://dinefining.github.io/stutwith/og.jpg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="stage"><canvas id="cv"></canvas></main>
+
+<button id="menuBtn" class="tab tl" aria-expanded="false" aria-controls="menu">Menu</button>
+
+<div id="menu" class="sheet tl" hidden>
+  <!-- groups of controls that work together. Two halves: one column together on wide screens,
+       above and below the photo on phones -->
+  <div class="half" id="menuTop">
+    <!-- in and out -->
+    <div class="group">
+      <div class="duo">
+        <label class="ctl" id="upload" data-tip="upload"><span>Upload</span><input id="file" type="file" accept="image/*"></label>
+        <button class="ctl" id="stack" data-tip="stack"><span>Stack</span></button>
+      </div>
+    </div>
+    <!-- the cut -->
+    <div class="group">
+      <div class="ctl step" id="dirBox" data-tip="dir">
+        <button id="dirPrev" aria-label="Previous">&lt;</button>
+        <button id="dirName" class="name">Across</button>
+        <button id="dirNext" aria-label="Next direction (D)">&gt;</button>
+      </div>
+      <label class="ctl range" data-tip="slices"><input id="slices" type="range" min="2" max="120" value="24" aria-label="Slices"><span>Slices</span></label>
+      <label class="ctl range" data-tip="bands"><input id="bands" type="range" min="1" max="60" value="1" aria-label="Bands"><span>Bands</span></label>
+      <div class="ctl step" id="rhythmBox" data-tip="rhythm">
+        <button id="rhythmPrev" aria-label="Previous">&lt;</button>
+        <button id="rhythmName" class="name">Even</button>
+        <button id="rhythmNext" aria-label="Next">&gt;</button>
+      </div>
+      <label class="ctl range" data-tip="angle"><input id="angle" type="range" min="-90" max="90" value="0" aria-label="Angle"><span>Angle</span></label>
+    </div>
+    <!-- the stutter -->
+    <div class="group">
+      <label class="ctl range" data-tip="step"><input id="step" type="range" min="-100" max="300" value="30" aria-label="Step"><span>Step</span></label>
+      <label class="ctl range" data-tip="reach"><input id="reach" type="range" min="1" max="100" value="100" aria-label="Reach"><span>Reach</span></label>
+      <div class="ctl step" id="falloffBox" data-tip="falloff">
+        <button id="falloffPrev" aria-label="Previous">&lt;</button>
+        <button id="falloffName" class="name">Hard</button>
+        <button id="falloffNext" aria-label="Next">&gt;</button>
+      </div>
+      <label class="ctl range" data-tip="bend"><input id="bend" type="range" min="-100" max="100" value="0" aria-label="Bend"><span>Bend</span></label>
+      <div class="ctl step" id="edgeBox" data-tip="edge">
+        <button id="edgePrev" aria-label="Previous">&lt;</button>
+        <button id="edgeName" class="name">Edge Stop</button>
+        <button id="edgeNext" aria-label="Next edge (E)">&gt;</button>
+      </div>
+    </div>
+  </div>
+  <div class="half" id="menuBottom">
+    <!-- breaking it up -->
+    <div class="group">
+      <label class="ctl range" data-tip="stagger"><input id="stagger" type="range" min="-100" max="100" value="0" aria-label="Stagger"><span>Stagger</span></label>
+      <label class="ctl range" data-tip="jitter"><input id="jitter" type="range" min="0" max="100" value="0" aria-label="Jitter"><span>Jitter</span></label>
+      <div class="duo">
+        <button class="ctl toggle" id="flip" data-tip="flip"><span>Flip</span></button>
+        <button class="ctl toggle" id="zigzag" data-tip="zigzag"><span>Zigzag</span></button>
+      </div>
+    </div>
+    <!-- led by the photo -->
+    <div class="group">
+      <label class="ctl range" data-tip="light"><input id="light" type="range" min="-100" max="100" value="0" aria-label="Light"><span>Light</span></label>
+      <div class="ctl step" id="sortBox" data-tip="sort">
+        <button id="sortPrev" aria-label="Previous">&lt;</button>
+        <button id="sortName" class="name">Sort Off</button>
+        <button id="sortNext" aria-label="Next">&gt;</button>
+      </div>
+    </div>
+    <!-- anchors -->
+    <div class="group">
+      <div class="ctl step" id="anchorsBox" data-tip="anchors">
+        <button id="anchorsPrev" aria-label="Previous">&lt;</button>
+        <button id="anchorsName" class="name">1 Anchor</button>
+        <button id="anchorsNext" aria-label="One more anchor">&gt;</button>
+      </div>
+      <label class="ctl range" data-tip="feather"><input id="feather" type="range" min="0" max="100" value="0" aria-label="Feather"><span>Feather</span></label>
+    </div>
+    <!-- what shows -->
+    <div class="group">
+      <div class="duo">
+        <button class="ctl toggle" id="lines" data-tip="lines"><span>Grid</span></button>
+        <button class="ctl toggle on" id="mark" data-tip="mark"><span>Anchor</span></button>
+      </div>
+    </div>
+    <!-- history and saving -->
+    <div class="group">
+      <div class="duo">
+        <button class="ctl" id="undo" data-tip="undo"><span>Undo</span></button>
+        <button class="ctl" id="redo" data-tip="redo"><span>Redo</span></button>
+      </div>
+      <div class="duo">
+        <button class="ctl" id="dice" data-tip="dice"><span>Dice</span></button>
+        <button class="ctl" id="reset" data-tip="reset"><span>Reset</span></button>
+      </div>
+      <button class="ctl" id="save" data-tip="save"><span>Download</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- a ? in the top right corner opens the credit beside it -->
+<div id="about">
+  <p id="aboutText" hidden>A <a class="mm" href="https://ravipopat.info/maybe-machines" target="_blank" rel="noopener">Maybe Machine</a> by <a class="rp" href="https://ravipopat.info" target="_blank" rel="noopener">Ravi Popat</a></p>
+  <button id="aboutBtn" aria-expanded="false" aria-controls="aboutText" aria-label="About"><span class="q">?</span><svg class="x" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5 15 15M15 5 5 15"/></svg></button>
+</div>
+<p id="tip" hidden></p>
+<div id="drop" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

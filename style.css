@@ -1,0 +1,113 @@
+:root {
+  --paper: #fff;
+  --ink: #111;
+  --slab: #e0e0e0;    /* every control is a flat grey slab */
+  --fill: #a9c2ff;    /* how far a slider is turned */
+  --red: #f26a6a;     /* the < > caps */
+  --yellow: #ffe100;  /* an on/off button that's on */
+  --green: #9fe3a9;   /* the Menu tab, the ? and the credit's links, as soft as the blue */
+  --label: #8a8a8a;
+  --gap: 2px;
+  --edge: 14px;
+  --row: 20px;
+  --panel: 164px;
+}
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink);
+  font: 400 11px/1 "JetBrains Mono", ui-monospace, monospace;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; }
+
+#stage { position: fixed; inset: 0; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: default; }
+
+/* ---- the Menu tab, top left ---- */
+.tab {
+  position: fixed; z-index: 2; height: var(--row); width: calc((var(--panel) - var(--gap)) / 2); padding: 0; border: 0;
+  background: var(--slab); cursor: pointer; user-select: none;
+}
+.tab.tl { top: var(--edge); left: var(--edge); background: var(--green); }
+.tab:focus { outline: none; }
+
+/* ---- sheets ---- */
+.sheet { position: fixed; z-index: 2; box-sizing: border-box; user-select: none; }
+.sheet[hidden] { display: none !important; }
+.sheet.tl {
+  top: calc(var(--edge) + var(--row) + var(--gap)); left: var(--edge); width: var(--panel);
+  display: grid; gap: var(--gap); background: var(--paper); outline: var(--gap) solid var(--paper); max-height: calc(100vh - 2 * var(--edge) - var(--row) - var(--gap)); overflow: auto; scrollbar-width: none;
+}
+
+.half { display: contents; }
+/* controls that work together sit together */
+.group { display: grid; gap: var(--gap); }
+
+/* on phones the open menu splits: its first half sits above the photo and its second below, each in two columns,
+   and app.js fits the photo between them */
+@media (max-width: 700px) {
+  .sheet.tl:not([hidden]) { display: block; position: static; width: auto; max-height: none; overflow: visible; background: none; outline: none; }
+  .half { position: fixed; z-index: 2; left: var(--edge); right: var(--edge); display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); background: var(--paper); outline: var(--gap) solid var(--paper); }
+  .half .group { grid-column: span 2; grid-template-columns: 1fr 1fr; }
+  /* a group with an odd control out lets the last one run the full width */
+  .half .group > :last-child:nth-child(odd) { grid-column: span 2; }
+  #menuTop { top: calc(var(--edge) + var(--row) + var(--gap)); }
+  #menuBottom { bottom: var(--edge); }
+  .half .duo { grid-column: span 2; }
+}
+
+/* ---- controls: flat grey slabs ---- */
+.ctl {
+  position: relative; overflow: hidden; height: var(--row); box-sizing: border-box;
+  display: grid; place-items: center; margin: 0; padding: 0 6px; border: 0; border-radius: 0;
+  background: var(--slab); color: var(--ink); cursor: pointer; white-space: nowrap;
+}
+.ctl > span { position: relative; pointer-events: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ctl:disabled, .step button:disabled { color: var(--label); cursor: default; }
+/* no focus box round a control */
+.ctl:focus, .step button:focus, .range input:focus, .tab:focus { outline: none; }
+.toggle.on { background: var(--yellow); }
+#upload input { display: none; }
+
+/* a row with < name > : red caps at either end */
+.step { grid-template-columns: var(--row) 1fr var(--row); padding: 0; cursor: default; }
+.step button { height: 100%; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.step > button:first-child, .step > button:last-child { background: var(--red); }
+.step > button:first-child:disabled, .step > button:last-child:disabled { background: #e9b3b3; }
+
+/* sliders: the slab fills blue from the left as far as it's turned, --v being 0..100, under the name */
+.range {
+  --v: 50; cursor: ew-resize; padding: 0;
+  background: linear-gradient(90deg, var(--fill) calc(var(--v) * 1%), transparent 0) no-repeat, var(--slab);
+}
+.range input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.range:has(input:disabled) { color: var(--label); background: var(--slab); }
+.range input:disabled { cursor: default; }
+
+.duo { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap); }
+
+/* ---- the hover info: a grey slab under the photo, its left edge on the photo's; app.js places it ---- */
+#tip {
+  position: fixed; z-index: 1; left: 0; top: 0; margin: 0; height: var(--row); padding: 0 6px; box-sizing: border-box;
+  display: flex; align-items: center; background: var(--slab); color: var(--ink); font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+#tip[hidden] { display: none; }
+#tip.flash { background: var(--red); }
+
+/* ---- About: a green ? top right that opens the credit, on grey, beside it; the ? turns into a cross ---- */
+#about { position: fixed; z-index: 2; top: var(--edge); right: var(--edge); display: flex; gap: var(--gap); user-select: none; }
+#aboutText { margin: 0; height: var(--row); padding: 0 8px; display: flex; align-items: center; gap: .6ch; background: var(--slab); font-size: 11px; white-space: nowrap; }
+#aboutText[hidden] { display: none; }
+#aboutText a { color: inherit; text-decoration: none; padding: 1px 2px; }
+#aboutText .mm, #aboutText .rp { background: var(--green); }
+#aboutText a:hover { text-decoration: underline; text-underline-offset: 2px; }
+#aboutBtn { width: var(--row); height: var(--row); padding: 0; border: 0; background: var(--green); cursor: pointer; display: grid; place-items: center; }
+#aboutBtn:focus { outline: none; }
+#aboutBtn .x { display: none; width: 14px; height: 14px; fill: none; stroke: var(--ink); stroke-width: 1.4; }
+#aboutBtn[aria-expanded="true"] .x { display: block; }
+#aboutBtn[aria-expanded="true"] .q { display: none; }
+
+/* ---- drag & drop ---- */
+#drop { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(169, 194, 255, .15); }
+#drop[hidden] { display: none; }
