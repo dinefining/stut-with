@@ -4,7 +4,7 @@
 
 const $ = s => document.querySelector(s);
 const EDGE = 14; // the page margin, the same as --edge in style.css: the Menu tab's and, on a phone, the photo's
-const ACCENT = '#0bdb00', RED = '#f26a6a', PAD = 56, MAX_SIDE = 2400, HISTORY = 60; // PAD keeps the photo clear of the corner buttons
+const ACCENT = '#0bdb00', YELLOW = '#f8cd46', PAD = 56, MAX_SIDE = 2400, HISTORY = 60; // PAD keeps the photo clear of the corner buttons
 const STARTER = 'starter.jpg'; // ships alongside the app
 
 const DIRS = [
@@ -584,10 +584,10 @@ function overlay(f, T, R) {
     ctx.stroke(); ctx.restore();
   }
   if (mark) T.pts.forEach(([ax, ay], n) => {
-    // a flat white square with a red dot; the one arrows nudge has a solid dot, the others a ring
+    // a flat black square with a yellow dot, like the Menu tab; the one arrows nudge has a solid dot, the others a ring
     const x = Math.round(X(ax)), y = Math.round(Y(ay)), r = Math.round(7 * dpr);
-    ctx.fillStyle = '#fff'; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
-    ctx.fillStyle = ctx.strokeStyle = RED; ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.arc(x, y, 3 * dpr, 0, Math.PI * 2);
+    ctx.fillStyle = '#000'; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+    ctx.fillStyle = ctx.strokeStyle = YELLOW; ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.arc(x, y, 3 * dpr, 0, Math.PI * 2);
     n === active || T.pts.length === 1 ? ctx.fill() : ctx.stroke();
   });
 }
@@ -870,7 +870,18 @@ addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; $('#drop')
 addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#drop').hidden = true; } });
 addEventListener('dragover', e => e.preventDefault());
 addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; $('#drop').hidden = true; loadFile(e.dataTransfer.files[0]); });
-addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) loadFile(f); });
+// Cmd/Ctrl+V swaps in a copied image: a picture or image file on the clipboard, or failing that the first image in
+// something copied off a web page (that one only loads if its site allows it)
+addEventListener('paste', async e => {
+  if (e.target.matches?.('input, textarea')) return;
+  const d = e.clipboardData, f = [...d.files, ...[...d.items].filter(i => i.kind === 'file').map(i => i.getAsFile())].find(f => f?.type.startsWith('image/'));
+  if (f) { e.preventDefault(); return loadFile(f); }
+  const url = new DOMParser().parseFromString(d.getData('text/html'), 'text/html').querySelector('img')?.src || d.getData('text/plain').trim();
+  if (!/^(https?:|data:image\/)/.test(url)) return;
+  e.preventDefault();
+  try { start(toCanvas(await loadImage(url, !url.startsWith('data:')))); }
+  catch { if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(url) || /<img/i.test(d.getData('text/html'))) say('Couldn\'t paste that image: save it and drop it in instead', true); }
+});
 
 new ResizeObserver(layout).observe(stage);
 

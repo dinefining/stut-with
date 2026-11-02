@@ -2,10 +2,9 @@
   --paper: #fff;
   --ink: #111;
   --slab: #e0e0e0;    /* every control is a flat grey slab */
-  --fill: #a9c2ff;    /* how far a slider is turned */
-  --red: #f26a6a;     /* the < > caps */
-  --yellow: #ffe100;  /* an on/off button that's on */
-  --green: #9fe3a9;   /* the Menu tab, the ? and the credit's links, as soft as the blue */
+  --yellow: #f8cd46;  /* the one colour: slider fills, the < > caps, on/off buttons that are on, the credit's links */
+  --pale: #f6e3a8;    /* a < > cap with nowhere to go */
+  --black: #000;      /* the Menu tab and the ?, with yellow on them */
   --label: #8a8a8a;
   --gap: 2px;
   --edge: 14px;
@@ -28,7 +27,7 @@ button { font: inherit; color: inherit; }
   position: fixed; z-index: 2; height: var(--row); width: calc((var(--panel) - var(--gap)) / 2); padding: 0; border: 0;
   background: var(--slab); cursor: pointer; user-select: none;
 }
-.tab.tl { top: var(--edge); left: var(--edge); background: var(--green); }
+.tab.tl { top: var(--edge); left: var(--edge); background: var(--black); color: var(--yellow); }
 .tab:focus { outline: none; }
 
 /* ---- sheets ---- */
@@ -48,12 +47,11 @@ button { font: inherit; color: inherit; }
 @media (max-width: 700px) {
   .sheet.tl:not([hidden]) { display: block; position: static; width: auto; max-height: none; overflow: visible; background: none; outline: none; }
   .half { position: fixed; z-index: 2; left: var(--edge); right: var(--edge); display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); background: var(--paper); outline: var(--gap) solid var(--paper); }
-  .half .group { grid-column: span 2; grid-template-columns: 1fr 1fr; }
-  /* a group with an odd control out lets the last one run the full width */
-  .half .group > :last-child:nth-child(odd) { grid-column: span 2; }
+  /* groups and pairs melt away, so every control sits two to a row; only Download, the odd one out, runs the full width */
+  .half .group, .half .duo { display: contents; }
+  #save { grid-column: span 2; }
   #menuTop { top: calc(var(--edge) + var(--row) + var(--gap)); }
   #menuBottom { bottom: var(--edge); }
-  .half .duo { grid-column: span 2; }
 }
 
 /* ---- controls: flat grey slabs ---- */
@@ -69,16 +67,16 @@ button { font: inherit; color: inherit; }
 .toggle.on { background: var(--yellow); }
 #upload input { display: none; }
 
-/* a row with < name > : red caps at either end */
+/* a row with < name > : yellow caps at either end */
 .step { grid-template-columns: var(--row) 1fr var(--row); padding: 0; cursor: default; }
 .step button { height: 100%; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
-.step > button:first-child, .step > button:last-child { background: var(--red); }
-.step > button:first-child:disabled, .step > button:last-child:disabled { background: #e9b3b3; }
+.step > button:first-child, .step > button:last-child { background: var(--yellow); }
+.step > button:first-child:disabled, .step > button:last-child:disabled { background: var(--pale); }
 
-/* sliders: the slab fills blue from the left as far as it's turned, --v being 0..100, under the name */
+/* sliders: the slab fills yellow from the left as far as it's turned, --v being 0..100, under the name */
 .range {
   --v: 50; cursor: ew-resize; padding: 0;
-  background: linear-gradient(90deg, var(--fill) calc(var(--v) * 1%), transparent 0) no-repeat, var(--slab);
+  background: linear-gradient(90deg, var(--yellow) calc(var(--v) * 1%), transparent 0) no-repeat, var(--slab);
 }
 .range input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
 .range:has(input:disabled) { color: var(--label); background: var(--slab); }
@@ -93,21 +91,21 @@ button { font: inherit; color: inherit; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
 }
 #tip[hidden] { display: none; }
-#tip.flash { background: var(--red); }
+#tip.flash { background: var(--black); color: var(--yellow); }
 
-/* ---- About: a green ? top right that opens the credit, on grey, beside it; the ? turns into a cross ---- */
+/* ---- About: a black ? top right that opens the credit, on grey, beside it; the ? turns into a cross ---- */
 #about { position: fixed; z-index: 2; top: var(--edge); right: var(--edge); display: flex; gap: var(--gap); user-select: none; }
 #aboutText { margin: 0; height: var(--row); padding: 0 8px; display: flex; align-items: center; gap: .6ch; background: var(--slab); font-size: 11px; white-space: nowrap; }
 #aboutText[hidden] { display: none; }
 #aboutText a { color: inherit; text-decoration: none; padding: 1px 2px; }
-#aboutText .mm, #aboutText .rp { background: var(--green); }
+#aboutText .mm, #aboutText .rp { background: var(--yellow); }
 #aboutText a:hover { text-decoration: underline; text-underline-offset: 2px; }
-#aboutBtn { width: var(--row); height: var(--row); padding: 0; border: 0; background: var(--green); cursor: pointer; display: grid; place-items: center; }
+#aboutBtn { width: var(--row); height: var(--row); padding: 0; border: 0; background: var(--black); color: var(--yellow); cursor: pointer; display: grid; place-items: center; }
 #aboutBtn:focus { outline: none; }
-#aboutBtn .x { display: none; width: 14px; height: 14px; fill: none; stroke: var(--ink); stroke-width: 1.4; }
+#aboutBtn .x { display: none; width: 14px; height: 14px; fill: none; stroke: var(--yellow); stroke-width: 1.4; }
 #aboutBtn[aria-expanded="true"] .x { display: block; }
 #aboutBtn[aria-expanded="true"] .q { display: none; }
 
 /* ---- drag & drop ---- */
-#drop { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(169, 194, 255, .15); }
+#drop { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: rgba(248, 205, 70, .15); }
 #drop[hidden] { display: none; }
